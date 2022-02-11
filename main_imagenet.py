@@ -8,20 +8,20 @@ import sys
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from dataset import SD_198
-from resnet import resnet18
+from imagenet_dataset import imagenet200
+from cifar_resnet_cbam import resnet18_cbam
 from collections import OrderedDict
 
 
-epochs = 200
+epochs = 101
 # epochs = 2
-lr = 1e-2
-milestones = [100, 150]
+lr = 1e-3
+milestones = [45, 90]
 lrate_decay = 0.1
-batch_size = 32
-weight_decay = 1e-5
+batch_size = 64
+weight_decay = 2e-4
 num_workers = 8
-optim_type = "sgd"
+optim_type = "adam"
 
 
 def tensor2numpy(x):
@@ -47,7 +47,7 @@ def run(lr, epochs, batch_size, optim_type, weight_decay, milestones, train_root
 
     log_dir = "./log/"
 
-    logfilename = log_dir + 'sgd198-{}-{}-{}-{}'.format(net_type, optim_type, batch_size, lr)
+    logfilename = log_dir + 'imagenet200-{}-{}-{}-{}'.format(net_type, optim_type, batch_size, lr)
 
     logging.basicConfig(
         level=logging.INFO,
@@ -62,29 +62,27 @@ def run(lr, epochs, batch_size, optim_type, weight_decay, milestones, train_root
     .format(lr, epochs, batch_size, optim_type, weight_decay, milestones, train_root, test_root, net_type))
 
     TRAIN_TRANSFORMS = T.Compose([
-        T.RandomResizedCrop(224,scale=(0.3,1.0)),
+        T.RandomCrop((32,32),padding=4),
         T.RandomHorizontalFlip(p=0.5),
-        T.ColorJitter(brightness=0.24705882352941178),
+        T.ColorJitter(brightness=0.24705882352941178)
         T.ToTensor(),
-        T.Normalize(mean=[0.5816372, 0.46805477, 0.4404385], std=[0.2744409, 0.2529034, 0.25408584]),
+        T.Normalize(mean=(0.5071, 0.4867, 0.4408), std=(0.2675, 0.2565, 0.2761)),
         ])
 
     TEST_TRANSFORMS = T.Compose([
-        T.Resize(256),
-        T.CenterCrop(224),
         T.ToTensor(),
-        T.Normalize(mean=[0.5816372, 0.46805477, 0.4404385], std=[0.2744409, 0.2529034, 0.25408584]),
+        T.Normalize(mean=(0.5071, 0.4867, 0.4408), std=(0.2675, 0.2565, 0.2761)),
         ])
 
-    train_dataset = SD_198(root=train_root, train=True, transform=TRAIN_TRANSFORMS)
+    train_dataset = imagenet200(root=train_root, train=True, transform=TRAIN_TRANSFORMS)
     print(len(train_dataset))
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=12, pin_memory=False)
 
-    test_dataset = SD_198(root=test_root, train=False, transform=TEST_TRANSFORMS)
+    test_dataset = imagenet200(root=test_root, train=False, transform=TEST_TRANSFORMS)
     print(len(test_dataset))
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=False)
 
-    model = resnet18(num_classes=train_dataset.class_num, pretrained=False).to(device)
+    model = resnet18_cbam(num_classes=train_dataset.class_num, pretrained=False).to(device)
 
     if optim_type == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
@@ -127,12 +125,12 @@ def run(lr, epochs, batch_size, optim_type, weight_decay, milestones, train_root
         if "fc" not in k:
             pretrained_dict[k] = v
 
-    torch.save(pretrained_dict, "./saved_parameters/sd198_resnet18_pretrained_1.pth")
+    torch.save(pretrained_dict, "./saved_parameters/imagenet200_resnet18_cbam_pretrained.pth")
 
     
 if __name__ == "__main__":
-    train_root = os.environ["SD198DATASETS"]
-    test_root = os.environ["SD198DATASETS"]
-    net_type = "resnet18"
+    train_root = os.environ["IMAGENETDATASET"]
+    test_root = os.environ["IMAGENETDATASET"]
+    net_type = "resnet18_cbam"
     
     run(lr, epochs, batch_size, optim_type, weight_decay, milestones, train_root, test_root, net_type)

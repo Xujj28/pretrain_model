@@ -13,7 +13,7 @@ class imagenet200(Dataset):
         self.root = root
         self.transform = transform
         self.train = train
-        self.class_num = 158
+        self.class_num = 200
 
         self.data, self.targets = self.getdata()
 
