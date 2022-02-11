@@ -64,7 +64,7 @@ def run(lr, epochs, batch_size, optim_type, weight_decay, milestones, train_root
     TRAIN_TRANSFORMS = T.Compose([
         T.RandomCrop((32,32),padding=4),
         T.RandomHorizontalFlip(p=0.5),
-        T.ColorJitter(brightness=0.24705882352941178)
+        T.ColorJitter(brightness=0.24705882352941178),
         T.ToTensor(),
         T.Normalize(mean=(0.5071, 0.4867, 0.4408), std=(0.2675, 0.2565, 0.2761)),
         ])
@@ -129,8 +129,8 @@ def run(lr, epochs, batch_size, optim_type, weight_decay, milestones, train_root
 
     
 if __name__ == "__main__":
-    train_root = os.environ["IMAGENETDATASET"]
-    test_root = os.environ["IMAGENETDATASET"]
+    train_root = os.path.join(os.environ["IMAGENETDATASET"], "train")
+    test_root = os.path.join(os.environ["IMAGENETDATASET"], "val")
     net_type = "resnet18_cbam"
     
     run(lr, epochs, batch_size, optim_type, weight_decay, milestones, train_root, test_root, net_type)
